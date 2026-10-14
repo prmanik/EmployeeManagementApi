@@ -1,4 +1,8 @@
+using EmployeeManagementApi.Services;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -33,27 +37,14 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
-app.MapGet("/api/employees", () =>
+app.MapGet("/api/employees", (IEmployeeService employeeService) =>
 {
-    var employees = new[]
-    {
-        new { Id = 1, Name = "John Doe", Position = "Software Engineer" },
-        new { Id = 2, Name = "Jane Smith", Position = "Project Manager" },
-        new { Id = 3, Name = "Bob Johnson", Position = "QA Analyst" }
-    };
-    return Results.Ok(employees);
+    return Results.Ok(employeeService.GetAll());
 });
 
-app.MapGet("api/employees/{id:int}", (int id) =>
+app.MapGet("/api/employees/{id:int}", (IEmployeeService employeeService, int id) =>
 {
-    var employees = new[]
-    {
-        new { Id = 1, Name = "John Doe", Position = "Software Engineer" },
-        new { Id = 2, Name = "Jane Smith", Position = "Project Manager" },
-        new { Id = 3, Name = "Bob Johnson", Position = "QA Analyst" }
-    };
-
-    var employee = employees.FirstOrDefault(e => e.Id == id);
+    var employee = employeeService.GetById(id);
     if (employee is null)
     {
         return Results.NotFound();
@@ -61,6 +52,7 @@ app.MapGet("api/employees/{id:int}", (int id) =>
 
     return Results.Ok(employee);
 });
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
