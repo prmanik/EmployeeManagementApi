@@ -4,7 +4,12 @@ namespace EmployeeManagementApi.Services
     {
         Employee? GetById(int id);
         IEnumerable<Employee> GetAll();
-    }
 
-    public record Employee(int Id, string Name, string Department);
+        Employee Add(Employee employee);
+
+        bool Update(int id, Employee employee);
+
+        bool Delete(int id);
+    }
+    
 }
