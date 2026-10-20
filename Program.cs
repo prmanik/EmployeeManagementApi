@@ -1,4 +1,5 @@
 using EmployeeManagementApi.Filters;
+using EmployeeManagementApi.Handlers;
 using EmployeeManagementApi.Services;
 using Microsoft.AspNetCore.Http;
 
@@ -6,11 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddSingleton<IEmployeeService, EmployeeService>();
-
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

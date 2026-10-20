@@ -28,16 +28,18 @@ namespace EmployeeManagementApi.Services
         public Employee Add(Employee employee)
         {
             employee.Id = Interlocked.Increment(ref _lastId);
-            _employees[employee.Id] = employee;
+            _employees.TryAdd(employee.Id, employee);
             return employee;
         }
 
         public bool Update(int id, Employee employee)
         {
-            if (_employees.TryGetValue(id, out Employee? existingEmployee))
+            while (_employees.TryGetValue(id, out Employee? existingEmployee))
             {
-                _employees[id] = employee;
-                return true;
+                if (_employees.TryUpdate(id, employee, existingEmployee))
+                {
+                    return true;
+                }
             }
             return false;
         }
