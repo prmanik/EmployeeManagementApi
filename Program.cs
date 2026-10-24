@@ -1,12 +1,16 @@
 using EmployeeManagementApi.Filters;
 using EmployeeManagementApi.Handlers;
 using EmployeeManagementApi.Services;
-using Microsoft.AspNetCore.Http;
+using EmployeeManagementApi.Models;
+using EmployeeManagementApi.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddSingleton<IEmployeeService, EmployeeService>();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=employees.db"));
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
@@ -20,18 +24,22 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
 }
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/employees", (IEmployeeService employeeService) =>
+app.MapGet("/api/employees", async (IEmployeeService employeeService) =>
 {
-    return Results.Ok(employeeService.GetAll());
+    return Results.Ok(await employeeService.GetAllAsync());
 });
 
-app.MapGet("/api/employees/{id:int}", (IEmployeeService employeeService, int id) =>
+app.MapGet("/api/employees/{id:int}", async (IEmployeeService employeeService, int id) =>
 {
-    var employee = employeeService.GetById(id);
+    var employee = await employeeService.GetByIdAsync(id);
     if (employee is null)
     {
         return Results.NotFound();
@@ -40,15 +48,15 @@ app.MapGet("/api/employees/{id:int}", (IEmployeeService employeeService, int id)
     return Results.Ok(employee);
 });
 
-app.MapPost("/api/employees", (Employee employee, IEmployeeService employeeService) =>
+app.MapPost("/api/employees", async (Employee employee, IEmployeeService employeeService) =>
 {
-    var addedEmployee = employeeService.Add(employee);
+    var addedEmployee = await employeeService.AddAsync(employee);
     return Results.Created($"/api/employees/{addedEmployee.Id}", addedEmployee);
 }).AddEndpointFilter<ValidationFilter<Employee>>();
 
-app.MapPut("/api/employees/{id:int}", (int id, Employee employee, IEmployeeService employeeService) =>
+app.MapPut("/api/employees/{id:int}", async (int id, Employee employee, IEmployeeService employeeService) =>
 {
-    var updated = employeeService.Update(id, employee);
+    var updated = await employeeService.UpdateAsync(id, employee);
     if (!updated)
     {
         return Results.NotFound();
@@ -57,9 +65,9 @@ app.MapPut("/api/employees/{id:int}", (int id, Employee employee, IEmployeeServi
     return Results.NoContent();
 }).AddEndpointFilter<ValidationFilter<Employee>>();
 
-app.MapDelete("/api/employees/{id:int}", (int id, IEmployeeService employeeService) =>
+app.MapDelete("/api/employees/{id:int}", async (int id, IEmployeeService employeeService) =>
 {
-    var deleted = employeeService.Delete(id);
+    var deleted = await employeeService.DeleteAsync(id);
     if (!deleted)
     {
         return Results.NotFound();

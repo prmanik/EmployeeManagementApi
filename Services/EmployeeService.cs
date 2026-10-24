@@ -1,52 +1,62 @@
 using System.Collections.Concurrent;
+using System.Data;
+using EmployeeManagementApi.Data;
+using EmployeeManagementApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeManagementApi.Services
 {
     public class EmployeeService : IEmployeeService
     {
 
-        private readonly ConcurrentDictionary<int, Employee> _employees
-        = new();
-        private int _lastId = 0;
+        private readonly AppDbContext _dbContext;
 
-        public EmployeeService()
+        public EmployeeService(AppDbContext dbContext)
         {
-            // Initialize with some sample data
-            Add(new Employee { Name = "John Doe", Department = "HR", Salary = 50000 });
-            Add(new Employee { Name = "Jane Smith", Department = "IT", Salary = 60000 });
-            Add(new Employee { Name = "Mike Johnson", Department = "Finance", Salary = 55000 });
+            _dbContext = dbContext;
         }
-        public Employee? GetById(int id)
+        public async Task<Employee?> GetByIdAsync(int id)
         {
-            return _employees.TryGetValue(id, out Employee? employee) ? employee : null;
+            return await _dbContext.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
         }
-        public IEnumerable<Employee> GetAll()
+        public async Task<IEnumerable<Employee>> GetAllAsync()
         {
-            return _employees.Values.OrderBy(e => e.Id);
+            return await _dbContext.Employees.AsNoTracking().OrderBy(e => e.Id).ToListAsync();
         }
 
-        public Employee Add(Employee employee)
+        public async Task<Employee> AddAsync(Employee employee)
         {
-            employee.Id = Interlocked.Increment(ref _lastId);
-            _employees.TryAdd(employee.Id, employee);
+            employee.Id = 0; // Ensure the Id is set to 0 so that EF Core generates a new Id
+            _dbContext.Employees.Add(employee);
+            await _dbContext.SaveChangesAsync();
             return employee;
         }
 
-        public bool Update(int id, Employee employee)
+        public async Task<bool> UpdateAsync(int id, Employee employee)
         {
-            while (_employees.TryGetValue(id, out Employee? existingEmployee))
+            var existingEmployee = await _dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id);
+            if (existingEmployee == null)
             {
-                if (_employees.TryUpdate(id, employee, existingEmployee))
-                {
-                    return true;
-                }
+                return false;
             }
-            return false;
+
+            existingEmployee.Name = employee.Name;
+            existingEmployee.Department = employee.Department;
+            existingEmployee.Salary = employee.Salary;
+            existingEmployee.Bonus = employee.Bonus;
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return false;
+            }
         }
 
-        public bool Delete(int id)
-        {
-            return _employees.TryRemove(id, out _);
-        }
+        public async Task<bool> DeleteAsync(int id)
+        => await _dbContext.Employees.Where(e => e.Id == id).ExecuteDeleteAsync() > 0;
+
     }
 }

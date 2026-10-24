@@ -1,15 +1,17 @@
+using EmployeeManagementApi.Models;
+
 namespace EmployeeManagementApi.Services
 {
     public interface IEmployeeService
     {
-        Employee? GetById(int id);
-        IEnumerable<Employee> GetAll();
+        Task<Employee?> GetByIdAsync(int id);
+        Task<IEnumerable<Employee>> GetAllAsync();
 
-        Employee Add(Employee employee);
+        Task<Employee> AddAsync(Employee employee);
 
-        bool Update(int id, Employee employee);
+        Task<bool> UpdateAsync(int id, Employee employee);
 
-        bool Delete(int id);
+        Task<bool> DeleteAsync(int id);
     }
-    
+
 }
